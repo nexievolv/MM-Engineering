@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { services } from "../lib/site-data";
 
-const BASE_URL = "https://forge-vision-pro.lovable.app";
+const BASE_URL = "https://www.mmengineeringbaddi.in";
 
 interface SitemapEntry {
   path: string;
