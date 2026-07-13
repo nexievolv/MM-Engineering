@@ -166,10 +166,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+import { useRouterState } from "@tanstack/react-router";
+
 function RootShell({ children }: { children: ReactNode }) {
+  const routerState = useRouterState();
+  const canonicalUrl = `https://www.mmengineeringbaddi.in${routerState.location.pathname}`;
+  
   return (
     <html lang="en">
       <head>
+        <link rel="canonical" href={canonicalUrl} />
         <HeadContent />
       </head>
       <body>
@@ -182,17 +188,19 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const routerState = useRouterState();
+  const isAdmin = routerState.location.pathname.startsWith("/admin");
 
   return (
     <QueryClientProvider client={queryClient}>
       <ScrollProgress />
-      <Header />
+      {!isAdmin && <Header />}
       <main>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
         <Outlet />
       </main>
-      <Footer />
-      <FloatingActions />
+      {!isAdmin && <Footer />}
+      {!isAdmin && <FloatingActions />}
     </QueryClientProvider>
   );
 }

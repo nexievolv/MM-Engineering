@@ -7,25 +7,30 @@ export function Footer() {
     <footer className="relative overflow-hidden bg-navy text-navy-foreground">
       <div className="blueprint-grid absolute inset-0" aria-hidden />
       <div className="container relative mx-auto px-6 lg:px-12">
-        {/* Newsletter band */}
+        {/* CTA band */}
         <div className="flex flex-col gap-6 border-b border-navy-foreground/10 py-12 md:flex-row md:items-center md:justify-between">
           <div>
-            <h3 className="font-display text-2xl font-bold">Get Engineering Updates from Baddi.</h3>
+            <h3 className="font-display text-2xl font-bold">Have a Drawing or Requirement?</h3>
             <p className="mt-1 text-sm text-navy-foreground/60">
-              Occasional notes on fabrication, materials and workshop capabilities. No spam.
+              Send us your drawings via email, WhatsApp or our enquiry form. Quotation within 48 hours.
             </p>
           </div>
-          <form className="flex w-full max-w-md gap-0" onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="email"
-              required
-              placeholder="Work email address"
-              className="min-w-0 flex-1 border border-navy-foreground/20 bg-navy-foreground/5 px-4 py-3.5 text-sm text-navy-foreground placeholder:text-navy-foreground/40 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-            />
-            <button className="flex shrink-0 items-center gap-2 bg-accent px-5 py-3.5 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-colors hover:bg-accent/90">
-              Subscribe <ArrowRight className="size-3.5" />
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/contact"
+              className="inline-flex items-center gap-2 bg-accent px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-accent-foreground transition-all duration-300 hover:-translate-y-0.5"
+            >
+              Request a Quote <ArrowRight className="size-3.5" />
+            </Link>
+            <a
+              href={`https://wa.me/${company.whatsapp}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 border border-navy-foreground/20 px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-navy-foreground transition-all duration-300 hover:border-accent hover:text-accent"
+            >
+              WhatsApp Us
+            </a>
+          </div>
         </div>
 
         {/* Main columns */}

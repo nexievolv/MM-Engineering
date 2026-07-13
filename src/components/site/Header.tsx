@@ -74,6 +74,8 @@ export function Header() {
           >
             <Link
               to="/services"
+              aria-haspopup="true"
+              aria-expanded={dropdown === "services"}
               className={cn(
                 "link-underline flex items-center gap-1 py-6 text-sm font-semibold",
                 solid ? "text-foreground" : "text-white",
@@ -149,9 +151,9 @@ export function Header() {
           </Link>
         </div>
 
-        {/* Mobile toggle */}
         <button
           aria-label="Toggle menu"
+          aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
           className={cn("grid size-11 place-items-center xl:hidden", solid ? "text-navy" : "text-white")}
         >

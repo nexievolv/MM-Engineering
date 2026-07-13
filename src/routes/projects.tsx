@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Building, Calendar, CheckCircle2 } from "lucide-react";
 import { img, projects } from "@/lib/site-data";
-import { CtaSection, Reveal, SectionHeader, Stagger, StaggerItem } from "@/components/site/Shared";
+import { CtaSection, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 
 export const Route = createFileRoute("/projects")({
   head: () => ({
@@ -24,15 +24,24 @@ function ProjectsPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={img.steelStructure} alt="" width={1280} height={960} className="absolute inset-0 size-full object-cover opacity-25" aria-hidden />
+        <img
+          src={img.steelStructure}
+          alt="MM Engineering structural steel projects hero"
+          width={1280}
+          height={960}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-25"
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-accent" />
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Projects</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Projects", to: "/projects" },
+              ]}
+            />
             <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-black leading-[1.05] text-white md:text-6xl">
               850+ Projects. One Standard.
             </h1>

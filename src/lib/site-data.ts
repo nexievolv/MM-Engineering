@@ -736,6 +736,8 @@ export interface BlogPost {
   readTime: string;
   image: string;
   featured?: boolean;
+  published?: boolean;
+  content?: string;
 }
 
 export const blogPosts: BlogPost[] = [
@@ -783,6 +785,94 @@ export const blogPosts: BlogPost[] = [
     date: "March 10, 2026",
     readTime: "7 min read",
     image: cnc,
+  },
+  {
+    slug: "mezzanine-floor-planning-guide",
+    title: "Planning a Mezzanine Floor for Your Factory? Here's What to Cover",
+    category: "Engineering",
+    excerpt:
+      "Before you add floor space to your plant in Baddi or Nalagarh, sort out the load calculations, column positioning, and fire safety norms. A practical checklist for factory managers.",
+    author: "MM Engineering Team",
+    date: "February 8, 2026",
+    readTime: "6 min read",
+    image: steelStructure,
+  },
+  {
+    slug: "welding-defects-inspection",
+    title: "5 Common Welding Defects and How We Catch Them Before Dispatch",
+    category: "Quality",
+    excerpt:
+      "Porosity, undercut, lack of fusion, cracks, and distortion — the five defects maintenance managers should know. We explain how each is prevented and tested in our Baddi workshop.",
+    author: "MM Engineering Team",
+    date: "January 15, 2026",
+    readTime: "5 min read",
+    image: welding,
+  },
+  {
+    slug: "bmc-vs-conventional-machining",
+    title: "BMC Boring vs Conventional Milling: When Does the Upgrade Matter?",
+    category: "Engineering",
+    excerpt:
+      "Not every job needs a BMC. But when tolerances drop below ±0.05 mm or the component weighs over 200 kg, conventional machines struggle. A comparison for tool room managers.",
+    author: "MM Engineering Team",
+    date: "December 5, 2025",
+    readTime: "5 min read",
+    image: engineeringDesign,
+  },
+  {
+    slug: "pickling-passivation-explained",
+    title: "Pickling and Passivation of Stainless Steel: Why It Matters for Pharma",
+    category: "Quality",
+    excerpt:
+      "After welding, the heat-affected zone loses its corrosion resistance. Pickling removes the oxide scale while passivation rebuilds the protective chromium layer. Here's the process we follow.",
+    author: "MM Engineering Team",
+    date: "November 18, 2025",
+    readTime: "4 min read",
+    image: quality,
+  },
+  {
+    slug: "packaging-machine-frame-fabrication",
+    title: "What Goes Into Fabricating a Packaging Machine Frame",
+    category: "Case Study",
+    excerpt:
+      "A behind-the-scenes look at how we fabricate, fixture-weld, and powder-coat machine frames in monthly batches for a Barotiwala packaging OEM — consistently, on schedule.",
+    author: "MM Engineering Team",
+    date: "October 12, 2025",
+    readTime: "6 min read",
+    image: factory,
+  },
+  {
+    slug: "material-test-certificates-explained",
+    title: "Material Test Certificates (MTC): What They Are and Why You Should Ask for Them",
+    category: "Procurement",
+    excerpt:
+      "An MTC traces your steel back to the mill — its chemical composition, mechanical properties, and heat number. For purchase managers, it is the simplest way to verify material quality.",
+    author: "MM Engineering Team",
+    date: "September 4, 2025",
+    readTime: "4 min read",
+    image: heavyMachinery,
+  },
+  {
+    slug: "shutdown-fabrication-planning",
+    title: "How to Plan Fabrication Work Around Your Plant Shutdown Window",
+    category: "Procurement",
+    excerpt:
+      "Most pharma and food plants in BBN shut down for 7–15 days annually. Co-ordinating structural, piping and equipment work within that window takes planning. Here's a practical approach.",
+    author: "MM Engineering Team",
+    date: "August 20, 2025",
+    readTime: "5 min read",
+    image: heroFabrication,
+  },
+  {
+    slug: "gi-ducting-vs-ss-ducting",
+    title: "GI vs SS HVAC Ducting for Cleanroom Projects: A Cost and Performance Comparison",
+    category: "Engineering",
+    excerpt:
+      "GI ducting costs less and works fine for general HVAC. But for pharma cleanrooms with humidity or chemical exposure, SS ducting pays for itself in maintenance savings over 5 years.",
+    author: "MM Engineering Team",
+    date: "July 10, 2025",
+    readTime: "5 min read",
+    image: finishedProducts,
   },
 ];
 

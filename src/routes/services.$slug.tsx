@@ -1,9 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, CheckCircle2, ChevronDown, Cog, Layers, icons } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, Cog, Layers } from "lucide-react";
 import { useState } from "react";
 import { services, type Service } from "@/lib/site-data";
-import { CtaSection, Reveal, SectionHeader, Stagger, StaggerItem } from "@/components/site/Shared";
+import { CtaSection, LucideIcon, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/services/$slug")({
@@ -92,11 +92,7 @@ function ServiceError() {
   );
 }
 
-function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = icons[name as keyof typeof icons];
-  if (!Icon) return null;
-  return <Icon className={className} />;
-}
+
 
 function Faq({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
@@ -131,18 +127,26 @@ function ServiceDetailPage() {
     <>
       {/* Hero banner */}
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={service.image} alt="" width={1280} height={960} className="absolute inset-0 size-full object-cover opacity-30" aria-hidden />
+        <img
+          src={service.image}
+          alt={service.title}
+          width={1280}
+          height={960}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-30"
+          aria-hidden
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.25em]">
-              <Link to="/services" className="text-white/50 transition-colors hover:text-accent">
-                Services
-              </Link>
-              <span className="text-white/30">/</span>
-              <span className="text-accent">{service.title}</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Services", to: "/services" },
+                { label: service.title, to: "/services/$slug", params: { slug: service.slug } },
+              ]}
+            />
             <div className="mt-6 flex items-start gap-5">
               <div className="grid size-14 shrink-0 place-items-center bg-accent text-accent-foreground md:size-16">
                 <LucideIcon name={service.icon} className="size-7 md:size-8" />
@@ -304,7 +308,7 @@ function ServiceDetailPage() {
       <section className="bg-background py-20 md:py-28">
         <div className="container mx-auto px-6 lg:px-12">
           <SectionHeader eyebrow="Process" title="From Drawing to Delivery" />
-          <Stagger className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+          <Stagger className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {service.process.map((p, i) => (
               <StaggerItem key={p.step}>
                 <div className="relative h-full border border-border bg-card p-6 shadow-card">

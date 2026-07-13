@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { X, ZoomIn } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { galleryCategories, galleryItems, img } from "@/lib/site-data";
-import { CtaSection, Reveal } from "@/components/site/Shared";
+import { CtaSection, Reveal, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/gallery")({
@@ -25,30 +25,86 @@ export const Route = createFileRoute("/gallery")({
 
 function GalleryPage() {
   const [category, setCategory] = useState("All");
-  const [lightbox, setLightbox] = useState<number | null>(null);
+  const [lightbox, setLightbox] = useState<number | null>(null); // Index in the filtered list
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const lightboxRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = galleryItems.filter((g) => category === "All" || g.category === category);
 
+  // Manage Keyboard events for lightbox
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setLightbox(null);
+      if (lightbox === null) return;
+      if (e.key === "Escape") {
+        closeLightbox();
+      } else if (e.key === "ArrowLeft") {
+        setLightbox((prev) => (prev !== null && prev > 0 ? prev - 1 : filtered.length - 1));
+      } else if (e.key === "ArrowRight") {
+        setLightbox((prev) => (prev !== null && prev < filtered.length - 1 ? prev + 1 : 0));
+      } else if (e.key === "Tab") {
+        // Simple focus trap: prevent focus from leaving lightbox
+        if (lightboxRef.current) {
+          const focusables = lightboxRef.current.querySelectorAll(
+            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+          );
+          if (focusables.length > 0) {
+            const first = focusables[0] as HTMLElement;
+            const last = focusables[focusables.length - 1] as HTMLElement;
+            if (e.shiftKey && document.activeElement === first) {
+              last.focus();
+              e.preventDefault();
+            } else if (!e.shiftKey && document.activeElement === last) {
+              first.focus();
+              e.preventDefault();
+            }
+          }
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [lightbox, filtered.length]);
+
+  const openLightbox = (index: number, e: React.MouseEvent<HTMLButtonElement>) => {
+    triggerRef.current = e.currentTarget;
+    setLightbox(index);
+    // Focus the lightbox container or close button shortly after render
+    setTimeout(() => {
+      const closeBtn = lightboxRef.current?.querySelector("button");
+      if (closeBtn) closeBtn.focus();
+    }, 50);
+  };
+
+  const closeLightbox = () => {
+    setLightbox(null);
+    // Restore focus
+    if (triggerRef.current) {
+      triggerRef.current.focus();
+      triggerRef.current = null;
+    }
+  };
 
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={img.heroFabrication} alt="" width={1920} height={1080} className="absolute inset-0 size-full object-cover opacity-25" aria-hidden />
+        <img
+          src={img.heroFabrication}
+          alt="MM Engineering workshop hero"
+          width={1920}
+          height={1080}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-25"
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-accent" />
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Gallery</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Gallery", to: "/gallery" },
+              ]}
+            />
             <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-black leading-[1.05] text-white md:text-6xl">
               Steel, Sparks & Precision
             </h1>
@@ -66,7 +122,7 @@ function GalleryPage() {
             {galleryCategories.map((c) => (
               <button
                 key={c}
-                onClick={() => setCategory(c)}
+                onClick={() => { setCategory(c); setLightbox(null); }}
                 className={cn(
                   "px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300",
                   category === c
@@ -82,8 +138,7 @@ function GalleryPage() {
           {/* Bento grid */}
           <motion.div layout className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [grid-auto-rows:180px] md:[grid-auto-rows:220px]">
             <AnimatePresence mode="popLayout">
-              {filtered.map((g) => {
-                const idx = galleryItems.indexOf(g);
+              {filtered.map((g, idx) => {
                 return (
                   <motion.button
                     layout
@@ -92,7 +147,7 @@ function GalleryPage() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.92 }}
                     transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    onClick={() => setLightbox(idx)}
+                    onClick={(e) => openLightbox(idx, e)}
                     className={cn(
                       "img-zoom group relative block overflow-hidden text-left",
                       g.size === "lg" && "col-span-2 row-span-2",
@@ -125,15 +180,44 @@ function GalleryPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setLightbox(null)}
+            onClick={closeLightbox}
+            ref={lightboxRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Image Lightbox"
             className="fixed inset-0 z-[70] flex items-center justify-center bg-navy/95 p-6 backdrop-blur-sm"
           >
             <button
               aria-label="Close lightbox"
+              onClick={closeLightbox}
               className="absolute right-6 top-6 grid size-12 place-items-center border border-white/20 text-white transition-colors hover:border-accent hover:text-accent"
             >
               <X className="size-6" />
             </button>
+            
+            {/* Navigation controls in lightbox */}
+            <button
+              aria-label="Previous image"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightbox((prev) => (prev !== null && prev > 0 ? prev - 1 : filtered.length - 1));
+              }}
+              className="absolute left-6 top-1/2 -translate-y-1/2 hidden md:grid size-12 place-items-center border border-white/20 text-white transition-colors hover:border-accent hover:text-accent"
+            >
+              <span className="text-xl">&larr;</span>
+            </button>
+            
+            <button
+              aria-label="Next image"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLightbox((prev) => (prev !== null && prev < filtered.length - 1 ? prev + 1 : 0));
+              }}
+              className="absolute right-6 top-1/2 -translate-y-1/2 hidden md:grid size-12 place-items-center border border-white/20 text-white transition-colors hover:border-accent hover:text-accent"
+            >
+              <span className="text-xl">&rarr;</span>
+            </button>
+
             <motion.figure
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -143,17 +227,17 @@ function GalleryPage() {
               className="max-h-full max-w-5xl"
             >
               <img
-                src={galleryItems[lightbox].image}
-                alt={galleryItems[lightbox].title}
+                src={filtered[lightbox].image}
+                alt={filtered[lightbox].title}
                 width={1280}
                 height={960}
                 className="max-h-[80vh] w-full object-contain"
               />
               <figcaption className="mt-4 flex items-center gap-3">
                 <span className="bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
-                  {galleryItems[lightbox].category}
+                  {filtered[lightbox].category}
                 </span>
-                <span className="font-display text-sm font-bold text-white">{galleryItems[lightbox].title}</span>
+                <span className="font-display text-sm font-bold text-white">{filtered[lightbox].title}</span>
               </figcaption>
             </motion.figure>
           </motion.div>

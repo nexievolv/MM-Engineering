@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, Search, User } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, ArrowRight, Clock, Search, User } from "lucide-react";
+import { useState, useEffect } from "react";
 import { blogPosts, img } from "@/lib/site-data";
-import { CtaSection, Reveal, Stagger, StaggerItem } from "@/components/site/Shared";
+import { CtaSection, Reveal, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
+import { fetchPublishedBlogPosts } from "@/lib/supabase-helpers";
 
-export const Route = createFileRoute("/blog")({
+export const Route = createFileRoute("/blog/")({
   head: () => ({
     meta: [
       { title: "Industrial Engineering Blog | Fabrication Insights Baddi" },
@@ -23,31 +24,98 @@ export const Route = createFileRoute("/blog")({
 });
 
 const categories = ["All", "Engineering", "Quality", "Procurement", "Case Study"];
+const POSTS_PER_PAGE = 6;
+
+const resolveImage = (imageUrl: string | null | undefined, category: string) => {
+  if (!imageUrl || imageUrl.startsWith("/assets/images/") || imageUrl.includes("/placeholder")) {
+    switch (category) {
+      case "Engineering":
+        return img.engineeringDesign;
+      case "Quality":
+        return img.quality;
+      case "Procurement":
+        return img.heavyMachinery;
+      case "Case Study":
+        return img.cnc;
+      default:
+        return img.workshop;
+    }
+  }
+  return imageUrl;
+};
 
 function BlogPage() {
   const [category, setCategory] = useState("All");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const [dbPosts, setDbPosts] = useState<any[]>([]);
 
-  const featured = blogPosts.find((p) => p.featured) ?? blogPosts[0];
-  const rest = blogPosts.filter((p) => p !== featured);
+  useEffect(() => {
+    async function loadDbPosts() {
+      try {
+        const posts = await fetchPublishedBlogPosts();
+        const formatted = posts.map((p: any) => ({
+          slug: p.slug,
+          title: p.title,
+          category: p.category,
+          excerpt: p.excerpt,
+          author: p.author || "MM Engineering Team",
+          date: p.date,
+          readTime: p.read_time,
+          image: resolveImage(p.image_url, p.category),
+          content: p.content,
+          featured: p.featured,
+          published: p.published
+        }));
+        setDbPosts(formatted);
+      } catch (err) {
+        console.error("Failed to load blog posts from database:", err);
+      }
+    }
+    loadDbPosts();
+  }, []);
+
+  // If database contains posts, only use database posts. Otherwise, fall back to hardcoded.
+  const allPosts = dbPosts.length > 0 ? dbPosts : blogPosts;
+  const featured = allPosts.find((p) => p.featured) ?? allPosts[0];
+  const rest = allPosts.filter((p) => p.slug !== featured?.slug);
   const filtered = rest.filter(
     (p) =>
       (category === "All" || p.category === category) &&
       (query === "" || p.title.toLowerCase().includes(query.toLowerCase())),
   );
 
+  // Reset to page 1 when filters change
+  const totalPages = Math.max(1, Math.ceil(filtered.length / POSTS_PER_PAGE));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedPosts = filtered.slice(
+    (currentPage - 1) * POSTS_PER_PAGE,
+    currentPage * POSTS_PER_PAGE,
+  );
+
+  const showFeatured = category === "All" && query === "" && currentPage === 1;
+
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={img.engineeringDesign} alt="" width={1280} height={960} className="absolute inset-0 size-full object-cover opacity-25" aria-hidden />
+        <img
+          src={img.engineeringDesign}
+          alt="MM Engineering blog hero"
+          width={1280}
+          height={960}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-25"
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-accent" />
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Insights</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Blog", to: "/blog" },
+              ]}
+            />
             <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-black leading-[1.05] text-white md:text-6xl">
               From the Engineering Desk
             </h1>
@@ -66,7 +134,7 @@ function BlogPage() {
               {categories.map((c) => (
                 <button
                   key={c}
-                  onClick={() => setCategory(c)}
+                  onClick={() => { setCategory(c); setPage(1); }}
                   className={cn(
                     "px-5 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-300",
                     category === c
@@ -82,17 +150,18 @@ function BlogPage() {
               <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => { setQuery(e.target.value); setPage(1); }}
                 placeholder="Search articles…"
+                aria-label="Search blog articles"
                 className="w-full border border-border bg-card py-3 pl-11 pr-4 text-sm focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
               />
             </div>
           </Reveal>
 
           {/* Featured */}
-          {category === "All" && query === "" && (
+          {showFeatured && (
             <Reveal className="mb-12">
-              <Link to="/contact" className="group grid overflow-hidden border border-border bg-card shadow-card card-lift lg:grid-cols-2">
+              <Link to="/blog/$slug" params={{ slug: featured.slug }} className="group grid overflow-hidden border border-border bg-card shadow-card card-lift lg:grid-cols-2">
                 <div className="img-zoom relative min-h-72">
                   <img src={featured.image} alt={featured.title} width={1280} height={960} loading="lazy" className="absolute inset-0 size-full object-cover" />
                   <span className="absolute left-5 top-5 bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
@@ -125,10 +194,10 @@ function BlogPage() {
           )}
 
           {/* Grid */}
-          <Stagger className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {(category === "All" && query === "" ? rest : filtered).map((b) => (
+          <Stagger key={`${category}-${page}-${query}`} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {paginatedPosts.map((b) => (
               <StaggerItem key={b.slug}>
-                <Link to="/contact" className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
+                <Link to="/blog/$slug" params={{ slug: b.slug }} className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
                   <div className="img-zoom h-52">
                     <img src={b.image} alt={b.title} width={1280} height={960} loading="lazy" className="size-full object-cover" />
                   </div>
@@ -155,27 +224,51 @@ function BlogPage() {
             ))}
           </Stagger>
 
-          {filtered.length === 0 && !(category === "All" && query === "") && (
+          {paginatedPosts.length === 0 && (
             <p className="py-16 text-center text-muted-foreground">No articles match your search.</p>
           )}
 
-          {/* Pagination */}
-          <Reveal className="mt-14 flex items-center justify-center gap-2">
-            {["1", "2", "3"].map((p, i) => (
+          {/* Real Pagination */}
+          {totalPages > 1 && (
+            <Reveal className="mt-14 flex items-center justify-center gap-2">
               <button
-                key={p}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                aria-label="Previous page"
                 className={cn(
-                  "grid size-11 place-items-center text-sm font-bold transition-all duration-300",
-                  i === 0 ? "bg-navy text-navy-foreground" : "border border-border text-muted-foreground hover:border-accent hover:text-accent",
+                  "grid size-11 place-items-center border border-border text-muted-foreground transition-all duration-300",
+                  currentPage === 1 ? "opacity-40 cursor-not-allowed" : "hover:border-accent hover:text-accent",
                 )}
               >
-                {p}
+                <ArrowLeft className="size-4" />
               </button>
-            ))}
-            <button className="grid size-11 place-items-center border border-border text-muted-foreground transition-all duration-300 hover:border-accent hover:text-accent">
-              <ArrowRight className="size-4" />
-            </button>
-          </Reveal>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPage(p)}
+                  aria-label={`Page ${p}`}
+                  aria-current={currentPage === p ? "page" : undefined}
+                  className={cn(
+                    "grid size-11 place-items-center text-sm font-bold transition-all duration-300",
+                    currentPage === p ? "bg-navy text-navy-foreground" : "border border-border text-muted-foreground hover:border-accent hover:text-accent",
+                  )}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                aria-label="Next page"
+                className={cn(
+                  "grid size-11 place-items-center border border-border text-muted-foreground transition-all duration-300",
+                  currentPage === totalPages ? "opacity-40 cursor-not-allowed" : "hover:border-accent hover:text-accent",
+                )}
+              >
+                <ArrowRight className="size-4" />
+              </button>
+            </Reveal>
+          )}
         </div>
       </section>
 

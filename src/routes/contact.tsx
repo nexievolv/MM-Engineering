@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Clock, Mail, MapPin, MessageCircle, Phone, Send } from "lucide-react";
+import { ArrowRight, Clock, Mail, MapPin, MessageCircle, Phone, Send, Upload, FileText, Loader } from "lucide-react";
 import { useState } from "react";
 import { company, img, services } from "@/lib/site-data";
-import { Reveal, SectionHeader, Stagger, StaggerItem } from "@/components/site/Shared";
+import { Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/contact")({
@@ -56,13 +56,17 @@ const contactCards = [
   { icon: Clock, title: "Working Hours", lines: [company.hours, "Sundays closed"] },
 ];
 
+import { submitLead, uploadRFQDrawing } from "@/lib/supabase-helpers";
+
 function Field({
   label,
+  name,
   type = "text",
   textarea = false,
   required = true,
 }: {
   label: string;
+  name: string;
   type?: string;
   textarea?: boolean;
   required?: boolean;
@@ -70,6 +74,7 @@ function Field({
   const [focused, setFocused] = useState(false);
   const [value, setValue] = useState("");
   const active = focused || value !== "";
+  const inputId = `field-${name}`;
 
   const shared =
     "peer w-full border border-border bg-card px-4 pt-6 pb-2.5 text-sm transition-all duration-300 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20";
@@ -77,6 +82,7 @@ function Field({
   return (
     <div className="relative">
       <label
+        htmlFor={inputId}
         className={cn(
           "pointer-events-none absolute left-4 transition-all duration-200",
           active ? "text-[10px] font-bold uppercase tracking-wider text-accent" : "text-sm text-muted-foreground",
@@ -88,6 +94,8 @@ function Field({
       </label>
       {textarea ? (
         <textarea
+          id={inputId}
+          name={name}
           rows={5}
           required={required}
           value={value}
@@ -98,6 +106,8 @@ function Field({
         />
       ) : (
         <input
+          id={inputId}
+          name={name}
           type={type}
           required={required}
           value={value}
@@ -113,19 +123,91 @@ function Field({
 
 function ContactPage() {
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      if (selectedFile.size > 25 * 1024 * 1024) {
+        setError("File size exceeds the 25MB limit. Please zip the files or upload via a shared link in the message body.");
+        setFile(null);
+      } else {
+        setError(null);
+        setFile(selectedFile);
+      }
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+    setUploadProgress(null);
+
+    const formData = new FormData(e.currentTarget);
+    const name = formData.get("name") as string;
+    const companyName = formData.get("company") as string;
+    const email = formData.get("email") as string;
+    const phone = formData.get("phone") as string;
+    const service = formData.get("service") as string;
+    const material = formData.get("material") as string;
+    const quantity = formData.get("quantity") as string;
+    const message = formData.get("message") as string;
+
+    try {
+      let drawingUrl = "";
+      if (file) {
+        setUploadProgress("Uploading engineering drawings...");
+        drawingUrl = await uploadRFQDrawing(file);
+      }
+
+      setUploadProgress("Saving submission...");
+      await submitLead({
+        name,
+        company: companyName,
+        email,
+        phone,
+        service,
+        material,
+        quantity,
+        message,
+        drawingUrl,
+      });
+      setSent(true);
+    } catch (err: any) {
+      console.error("Failed to submit lead:", err);
+      setError(err?.message || "Something went wrong. Please try again or reach us via phone/WhatsApp.");
+    } finally {
+      setSubmitting(false);
+      setUploadProgress(null);
+    }
+  };
 
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={img.factory} alt="" width={1280} height={960} className="absolute inset-0 size-full object-cover opacity-25" aria-hidden />
+        <img
+          src={img.factory}
+          alt="MM Engineering Baddi factory"
+          width={1280}
+          height={960}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-25"
+          aria-hidden
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-accent" />
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">Contact</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "Contact", to: "/contact" },
+              ]}
+            />
             <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-black leading-[1.05] text-white md:text-6xl">
               Talk to Our Team in Baddi.
             </h1>
@@ -200,17 +282,17 @@ function ContactPage() {
             ) : (
               <form
                 className="grid gap-5 sm:grid-cols-2"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setSent(true);
-                }}
+                onSubmit={handleSubmit}
               >
-                <Field label="Full Name" />
-                <Field label="Company Name" />
-                <Field label="Work Email" type="email" />
-                <Field label="Phone / WhatsApp" type="tel" />
+                <Field label="Full Name" name="name" />
+                <Field label="Company Name" name="company" required={false} />
+                <Field label="Work Email" name="email" type="email" />
+                <Field label="Phone / WhatsApp" name="phone" type="tel" />
                 <div className="sm:col-span-2">
+                  <label htmlFor="field-service" className="sr-only">Service required</label>
                   <select
+                    id="field-service"
+                    name="service"
                     required
                     defaultValue=""
                     className="w-full border border-border bg-card px-4 py-4 text-sm text-foreground transition-all duration-300 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
@@ -226,16 +308,71 @@ function ContactPage() {
                     <option value="other">Other / Not sure</option>
                   </select>
                 </div>
+                <Field label="Material Specification (optional, e.g. SS 316L, Mild Steel)" name="material" required={false} />
+                <Field label="Quantity Needed (optional, e.g. 50 units, 1 Ton)" name="quantity" required={false} />
                 <div className="sm:col-span-2">
-                  <Field label="Requirement details — dimensions, material, quantity, timeline" textarea />
+                  <Field label="Requirement details — dimensions, timeline, fabrication specifications" name="message" textarea />
                 </div>
+
+                {/* File Upload Section */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-navy mb-2">
+                    Upload Engineering Drawings (Optional, Max 25MB)
+                  </label>
+                  <div className="relative border-2 border-dashed border-border hover:border-accent bg-card transition-colors duration-300 p-6 text-center cursor-pointer">
+                    <input
+                      type="file"
+                      id="rfq-drawing-file"
+                      accept=".pdf,.dwg,.dxf,.step,.stp,.zip,.rar"
+                      onChange={handleFileChange}
+                      className="absolute inset-0 size-full cursor-pointer opacity-0"
+                    />
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      {file ? (
+                        <>
+                          <FileText className="size-10 text-accent animate-pulse" />
+                          <p className="text-sm font-semibold text-navy mt-1">{file.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB • Click or drag to replace
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="size-10 text-muted-foreground/60 group-hover:text-accent" />
+                          <p className="text-sm font-semibold text-navy mt-1">Drag and drop drawing files here</p>
+                          <p className="text-xs text-muted-foreground">
+                            Supported: PDF, DWG, DXF, STEP, STP, ZIP (Max 25MB)
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {uploadProgress && (
+                  <div className="sm:col-span-2 flex items-center gap-3 text-sm text-accent font-semibold bg-accent/5 p-3 border border-accent/20">
+                    <Loader className="size-4 animate-spin text-accent" />
+                    {uploadProgress}
+                  </div>
+                )}
+
+                {error && (
+                  <div className="sm:col-span-2 text-sm text-red-600 font-semibold bg-red-50 p-4 border-l-4 border-red-500">
+                    {error}
+                  </div>
+                )}
+
                 <div className="sm:col-span-2">
                   <button
                     type="submit"
-                    className="group inline-flex items-center gap-2 bg-accent px-8 py-4 text-sm font-bold uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/35"
+                    disabled={submitting}
+                    className={cn(
+                      "group inline-flex items-center gap-2 bg-accent px-8 py-4 text-sm font-bold uppercase tracking-wider text-accent-foreground shadow-lg shadow-accent/25 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/35",
+                      submitting && "opacity-70 cursor-not-allowed"
+                    )}
                   >
-                    Submit Enquiry
-                    <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />
+                    {submitting ? "Submitting..." : "Submit Enquiry"}
+                    {!submitting && <ArrowRight className="size-4 transition-transform duration-300 group-hover:translate-x-1" />}
                   </button>
                 </div>
               </form>

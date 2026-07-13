@@ -1,11 +1,17 @@
 import { motion, useInView, useScroll, useSpring, animate, useTransform } from "motion/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUp, MessageCircle, Phone } from "lucide-react";
+import { ArrowRight, ArrowUp, MessageCircle, Phone, icons } from "lucide-react";
 import { company, processTimeline } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
+
+export function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const Icon = icons[name as keyof typeof icons];
+  if (!Icon) return null;
+  return <Icon className={className} />;
+}
 
 export function Reveal({
   children,
@@ -365,5 +371,35 @@ export function ProcessTimelineSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+export function Breadcrumbs({
+  items,
+}: {
+  items: { label: string; to?: string; params?: any }[];
+}) {
+  return (
+    <nav className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em]" aria-label="Breadcrumb">
+      {items.map((item, idx) => {
+        const isLast = idx === items.length - 1;
+        return (
+          <div key={item.label} className="flex items-center gap-2">
+            {idx > 0 && <span className="text-white/30">/</span>}
+            {isLast || !item.to ? (
+              <span className={isLast ? "text-accent" : "text-white/50"}>{item.label}</span>
+            ) : (
+              <Link
+                to={item.to as any}
+                params={item.params}
+                className="text-white/50 transition-colors hover:text-accent"
+              >
+                {item.label}
+              </Link>
+            )}
+          </div>
+        );
+      })}
+    </nav>
   );
 }

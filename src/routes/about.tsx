@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Award, Eye, Flag, HeartHandshake, icons } from "lucide-react";
-import { certifications, img, stats } from "@/lib/site-data";
-import { Counter, CtaSection, Reveal, SectionHeader, Stagger, StaggerItem } from "@/components/site/Shared";
+import { Award, Eye, Flag, HeartHandshake } from "lucide-react";
+import { certifications, img } from "@/lib/site-data";
+import { Counter, CtaSection, LucideIcon, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/about")({
@@ -37,31 +37,41 @@ const values = [
   { icon: "MapPin", title: "Local Reliability", detail: "Located in Baddi, allowing us to respond quickly to emergency breakdowns and plant shutdown schedules." },
 ];
 
-const team = [
-  { name: "M. M. Sharma", role: "Founder & MD", detail: "25+ years in industrial manufacturing and structural fabrication; founded MM Engineering." },
-  { name: "Anil Sharma", role: "Head of Operations", detail: "Manages fabrication schedules, material sourcing, and quality checks at our Baddi workshop." },
-  { name: "Karan Dev", role: "Lead Machinist", detail: "Specialized in BMC boring & milling operations and custom gear manufacturing." },
+const stats = [
+  { value: 12, label: "Years Experience", suffix: "+" },
+  { value: 850, label: "Projects Delivered", suffix: "+" },
+  { value: 14, label: "Machinery Floor", suffix: " Units" },
+  { value: 100, label: "Client Retainers", suffix: "%" },
 ];
 
-function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = icons[name as keyof typeof icons];
-  if (!Icon) return null;
-  return <Icon className={className} />;
-}
+const team = [
+  { name: "Madan Lal", role: "Founder & Director", detail: "Over 25 years of hands-on industrial fabrication, erection, and mechanical engineering experience." },
+  { name: "Siddharth Sharma", role: "Operations & QC Head", detail: "Handles production scheduling, drawing reviews, and quality check sign-offs." },
+  { name: "Karan Dev", role: "Lead Machinist", detail: "Specialized in BMC boring & milling operations and custom gear manufacturing." },
+];
 
 function AboutPage() {
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
-        <img src={img.factory} alt="" width={1280} height={960} className="absolute inset-0 size-full object-cover opacity-25" aria-hidden />
+        <img
+          src={img.factory}
+          alt="MM Engineering fabrication plant"
+          width={1280}
+          height={960}
+          fetchPriority="high"
+          className="absolute inset-0 size-full object-cover opacity-25"
+        />
         <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} aria-hidden />
         <div className="blueprint-grid absolute inset-0" aria-hidden />
         <div className="container relative mx-auto px-6 lg:px-12">
           <Reveal>
-            <div className="flex items-center gap-3">
-              <span className="h-px w-10 bg-accent" />
-              <span className="text-xs font-semibold uppercase tracking-[0.3em] text-accent">About MM Engineering</span>
-            </div>
+            <Breadcrumbs
+              items={[
+                { label: "Home", to: "/" },
+                { label: "About", to: "/about" },
+              ]}
+            />
             <h1 className="mt-5 max-w-3xl text-balance font-display text-4xl font-black leading-[1.05] text-white md:text-6xl">
               Engineered for Baddi. Trusted for Quality.
             </h1>

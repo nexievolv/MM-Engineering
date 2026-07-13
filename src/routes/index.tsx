@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { motion, useScroll, useTransform, AnimatePresence } from "motion/react";
-import { icons, ArrowRight, ArrowDown, ChevronDown, Quote, Award, CheckCircle2 } from "lucide-react";
-import { useRef, useState } from "react";
+import { ArrowRight, ArrowDown, ChevronDown, Quote, Award, CheckCircle2 } from "lucide-react";
+import { useRef, useState, useEffect } from "react";
 import {
   img,
   stats,
@@ -18,8 +18,9 @@ import {
   homeFaqs,
   company,
 } from "@/lib/site-data";
-import { Reveal, Stagger, StaggerItem, Counter, SectionHeader, ArrowLink, CtaSection, ImageReveal, ProcessTimelineSection } from "@/components/site/Shared";
+import { Reveal, Stagger, StaggerItem, Counter, SectionHeader, ArrowLink, CtaSection, ImageReveal, ProcessTimelineSection, LucideIcon } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,11 +53,7 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const Icon = icons[name as keyof typeof icons];
-  if (!Icon) return null;
-  return <Icon className={className} />;
-}
+
 
 /* ---------------- HERO ---------------- */
 function Hero() {
@@ -155,9 +152,10 @@ function Hero() {
               key={s.label}
               className={cn(
                 "flex flex-col gap-1 px-5 py-5",
-                i > 0 && "sm:border-l sm:border-white/10",
-                i === 1 && "border-l border-white/10 sm:border-l",
-                i >= 2 && "border-t border-white/10 sm:border-t-0",
+                (i % 2 === 1) && "border-l border-white/10",
+                (i >= 2) && "border-t border-white/10",
+                "sm:border-t-0",
+                i > 0 ? "sm:border-l sm:border-white/10" : "sm:border-l-0"
               )}
             >
               <span className="font-display text-2xl font-black text-white sm:text-3xl">
@@ -221,6 +219,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
     <div className="border-b border-border">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
         className="flex w-full items-center justify-between gap-4 py-5 text-left"
       >
         <span className="font-display text-base font-bold text-navy md:text-lg">{q}</span>
@@ -243,12 +242,118 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   );
 }
 
+const resolveImage = (imageUrl: string | null | undefined, category: string) => {
+  if (!imageUrl || imageUrl.startsWith("/assets/images/") || imageUrl.includes("/placeholder")) {
+    switch (category) {
+      case "Engineering":
+        return img.engineeringDesign;
+      case "Quality":
+        return img.quality;
+      case "Procurement":
+        return img.heavyMachinery;
+      case "Case Study":
+        return img.cnc;
+      default:
+        return img.workshop;
+    }
+  }
+  return imageUrl;
+};
+
 /* ---------------- PAGE ---------------- */
 function HomePage() {
+  const [flippedCard, setFlippedCard] = useState<number | null>(null);
+  const [dbHomePosts, setDbHomePosts] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadHomePosts() {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("blog_posts")
+          .select("*")
+          .eq("published", true)
+          .order("created_at", { ascending: false });
+
+        if (data && data.length > 0) {
+          // Flagged for homepage first
+          const flagged = data.filter((p: any) => p.show_on_homepage);
+          // If none are flagged, show the latest 4 published database posts
+          const selected = flagged.length > 0 ? flagged : data.slice(0, 4);
+
+          const formatted = selected.map((p: any) => ({
+            slug: p.slug,
+            title: p.title,
+            category: p.category,
+            excerpt: p.excerpt,
+            author: p.author || "MM Engineering Team",
+            date: p.date,
+            readTime: p.read_time,
+            image: resolveImage(p.image_url, p.category),
+            content: p.content,
+            featured: p.featured,
+            published: p.published
+          }));
+          setDbHomePosts(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to load homepage posts:", err);
+      }
+    }
+    loadHomePosts();
+  }, []);
+
+  const [dbTestimonials, setDbTestimonials] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadHomeReviews() {
+      try {
+        const { data, error } = await (supabase as any)
+          .from("reviews")
+          .select("*")
+          .eq("approved", true)
+          .order("created_at", { ascending: false });
+
+        if (data && data.length > 0) {
+          const flagged = data.filter((r: any) => r.show_on_homepage);
+
+          if (flagged.length > 0) {
+            const formatted = flagged.map((r: any) => ({
+              name: r.name,
+              quote: r.comment,
+              role: `${r.role || "Plant Representative"}${r.company ? ` at ${r.company}` : ""}`
+            }));
+            setDbTestimonials(formatted);
+          } else {
+            setDbTestimonials([]);
+          }
+        } else {
+          setDbTestimonials([]);
+        }
+      } catch (err) {
+        console.error("Failed to load homepage testimonials:", err);
+      }
+    }
+    loadHomeReviews();
+  }, []);
+
   // Only the 3 core capabilities on the home page — Industrial Fabrication, Assembly & Integration, Custom Gear Manufacturing
   const coreServices = services.filter((s) =>
     ["industrial-fabrication", "assembly-integration", "custom-gear-manufacturing"].includes(s.slug),
   );
+
+  const displayPosts = dbHomePosts.length > 0 
+    ? dbHomePosts 
+    : blogPosts.slice(0, 4).map((b: any) => ({
+        slug: b.slug,
+        title: b.title,
+        category: b.category,
+        excerpt: b.excerpt,
+        date: b.date,
+        readTime: b.readTime,
+        image: b.image
+      }));
+
+  const displayTestimonials = dbTestimonials.length > 0 ? dbTestimonials : testimonials;
 
   return (
     <>
@@ -463,9 +568,18 @@ function HomePage() {
               </Reveal>
             </div>
             <Stagger className="grid gap-6 sm:grid-cols-2">
-              {whyChooseUs.map((w) => (
-                <StaggerItem key={w.title} className="flip-card flip-card-hover h-[240px] w-full">
-                  <div className="flip-card-inner">
+              {whyChooseUs.map((w, wIdx) => (
+                <StaggerItem
+                  key={w.title}
+                  className={cn(
+                    "flip-card flip-card-hover h-[240px] w-full cursor-pointer",
+                    flippedCard === wIdx && "flip-card-active",
+                  )}
+                >
+                  <div 
+                    className="flip-card-inner"
+                    onClick={() => setFlippedCard(flippedCard === wIdx ? null : wIdx)}
+                  >
                     {/* Front Face */}
                     <div className="flip-card-front border border-border bg-card p-7 shadow-card flex flex-col items-center justify-center text-center">
                       <div className="grid size-14 place-items-center bg-navy text-navy-foreground shadow-md">
@@ -473,7 +587,7 @@ function HomePage() {
                       </div>
                       <h3 className="mt-5 font-display text-lg font-bold text-navy">{w.title}</h3>
                       <span className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-accent animate-pulse">
-                        Hover to reveal →
+                        Tap or hover →
                       </span>
                     </div>
 
@@ -569,8 +683,8 @@ function HomePage() {
             eyebrow="Client Feedback"
             title="What Plant Heads & Purchase Managers Say"
           />
-          <Stagger className="grid gap-6 md:grid-cols-3">
-            {testimonials.map((t) => (
+          <Stagger key={displayTestimonials.map((t) => t.name).join(",")} className="grid gap-6 md:grid-cols-3">
+            {displayTestimonials.map((t) => (
               <StaggerItem key={t.name}>
                 <div className="card-lift flex h-full flex-col border border-border bg-card p-7 shadow-card">
                   <Quote className="size-7 text-accent" />
@@ -583,6 +697,15 @@ function HomePage() {
               </StaggerItem>
             ))}
           </Stagger>
+          <Reveal className="mt-12 text-center">
+            <Link
+              to="/reviews"
+              className="inline-flex items-center gap-2 border border-border bg-card px-6 py-3.5 text-xs font-bold uppercase tracking-wider text-navy transition-all duration-300 hover:border-accent hover:text-accent hover:-translate-y-0.5"
+            >
+              Read More Reviews & Leave Feedback
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </Reveal>
         </div>
       </section>
 
@@ -616,17 +739,17 @@ function HomePage() {
             eyebrow="Latest Insights"
             title="Engineering Notes from Our Team"
           />
-          <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {blogPosts.slice(0, 4).map((b) => (
+          <Stagger key={displayPosts.map((p) => p.slug).join(",")} className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            {displayPosts.map((b) => (
               <StaggerItem key={b.slug}>
-                <Link to="/blog" className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
+                <Link to="/blog/$slug" params={{ slug: b.slug }} className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
                   <div className="img-zoom relative h-40">
                     <img src={b.image} alt={b.title} width={800} height={480} loading="lazy" className="size-full object-cover" />
                   </div>
                   <div className="flex flex-1 flex-col p-5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-accent">{b.category}</span>
                     <h3 className="mt-2 flex-1 font-display text-base font-bold text-navy group-hover:text-accent">{b.title}</h3>
-                    <p className="mt-3 text-[11px] uppercase tracking-wider text-muted-foreground">{b.date} · {b.readTime}</p>
+                    <p className="mt-3 text-[11px] uppercase tracking-wider text-muted-foreground">{b.date} · {b.readTime || (b as any).read_time}</p>
                   </div>
                 </Link>
               </StaggerItem>
