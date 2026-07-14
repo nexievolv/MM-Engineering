@@ -181,6 +181,7 @@ function AdminGalleryPage() {
         .from("gallery")
         .upload(storagePath, compressedBlob, {
           contentType: "image/webp",
+          cacheControl: "31536000",
           upsert: true
         });
 
@@ -239,6 +240,7 @@ function AdminGalleryPage() {
         .from("gallery")
         .upload(imageToReplace.storage_path, compressedBlob, {
           contentType: "image/webp",
+          cacheControl: "31536000",
           upsert: true
         });
 

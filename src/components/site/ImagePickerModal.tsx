@@ -169,6 +169,7 @@ export function ImagePickerModal({ isOpen, onClose, onSelect }: ImagePickerModal
         .from("gallery")
         .upload(storagePath, compressedBlob, {
           contentType: "image/webp",
+          cacheControl: "31536000",
           upsert: true
         });
 
