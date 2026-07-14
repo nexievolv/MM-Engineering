@@ -586,6 +586,7 @@ function HomePage() {
                       <Link
                         to="/services/$slug"
                         params={{ slug: s.slug }}
+                        aria-label={`Explore ${s.title} capability`}
                         className="group inline-flex items-center gap-2 border border-navy px-6 py-3 text-xs font-bold uppercase tracking-wider text-navy transition-all duration-300 hover:bg-navy hover:text-navy-foreground"
                       >
                         Explore Capability
