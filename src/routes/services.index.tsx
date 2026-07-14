@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { img, services } from "@/lib/site-data";
 import { CtaSection, LucideIcon, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 
@@ -22,6 +24,31 @@ export const Route = createFileRoute("/services/")({
 
 
 function ServicesPage() {
+  const [covers, setCovers] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    async function loadCovers() {
+      try {
+        const { data } = await supabase
+          .from("gallery")
+          .select("*")
+          .eq("page", "Services")
+          .eq("category", "Cover")
+          .eq("is_published", true);
+        if (data) {
+          const mapping: Record<string, string> = {};
+          data.forEach(img => {
+            if (img.section) mapping[img.section] = img.public_url;
+          });
+          setCovers(mapping);
+        }
+      } catch (err) {
+        console.error("Failed to load service cover images:", err);
+      }
+    }
+    loadCovers();
+  }, []);
+
   return (
     <>
       {/* Page hero */}
@@ -68,7 +95,7 @@ function ServicesPage() {
                   className="card-lift group flex h-full flex-col border border-border bg-card shadow-card"
                 >
                   <div className="img-zoom relative h-52">
-                    <img src={s.image} alt={s.title} width={1280} height={960} loading="lazy" className="size-full object-cover" />
+                    <img src={covers[s.slug] || s.image} alt={s.title} width={1280} height={960} loading="lazy" className="size-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-navy/70 to-transparent opacity-60 transition-opacity duration-500 group-hover:opacity-40" />
                     <div className="absolute bottom-4 left-4 grid size-12 place-items-center bg-accent text-accent-foreground shadow-lg">
                       <LucideIcon name={s.icon} className="size-6" />

@@ -342,3 +342,86 @@
   background: oklch(0.68 0.18 45 / 0.05);
   margin: 1.5rem 0;
 }
+
+/* Tables styling */
+.prose-industrial table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  font-size: 0.85rem;
+}
+
+.prose-industrial th {
+  background-color: oklch(0.12 0.03 245 / 0.04);
+  color: var(--navy);
+  font-weight: 700;
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.prose-industrial td {
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+  vertical-align: top;
+}
+
+.prose-industrial tr:nth-child(even) {
+  background-color: oklch(0.12 0.03 245 / 0.015);
+}
+
+/* Figures and figcaptions */
+.prose-industrial figure {
+  margin: 1.5rem 0;
+  display: block;
+}
+
+.prose-industrial figcaption {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin-top: 0.5rem;
+  font-style: italic;
+  text-align: center;
+}
+
+.prose-industrial img {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border);
+  padding: 4px;
+  background-color: white;
+}
+
+/* Lists formatting fix inside prose-industrial */
+.prose-industrial ul {
+  list-style-type: disc;
+}
+
+.prose-industrial ol {
+  list-style-type: decimal;
+}
+
+/* Code block styles */
+.prose-industrial pre {
+  background: oklch(0.12 0.03 245 / 0.04);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 1.5rem 0;
+  border: 1px solid var(--border);
+}
+
+.prose-industrial code {
+  font-family: monospace;
+  font-size: 0.9em;
+  background: oklch(0.12 0.03 245 / 0.04);
+  padding: 0.2rem 0.4rem;
+  border-radius: 2px;
+  color: var(--navy);
+}
+
+.prose-industrial pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}

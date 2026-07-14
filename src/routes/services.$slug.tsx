@@ -1,7 +1,8 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowRight, CheckCircle2, ChevronDown, Cog, Layers } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { services, type Service } from "@/lib/site-data";
 import { CtaSection, LucideIcon, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
@@ -122,13 +123,37 @@ function Faq({ q, a }: { q: string; a: string }) {
 function ServiceDetailPage() {
   const { service } = Route.useLoaderData() as { service: Service };
   const related = services.filter((s) => s.slug !== service.slug).slice(0, 3);
+  const [coverUrl, setCoverUrl] = useState(service.image);
+
+  useEffect(() => {
+    async function loadCover() {
+      try {
+        const { data } = await supabase
+          .from("gallery")
+          .select("public_url")
+          .eq("page", "Services")
+          .eq("section", service.slug)
+          .eq("category", "Cover")
+          .eq("is_published", true)
+          .limit(1);
+        if (data && data[0]) {
+          setCoverUrl(data[0].public_url);
+        } else {
+          setCoverUrl(service.image);
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic cover:", err);
+      }
+    }
+    loadCover();
+  }, [service.slug]);
 
   return (
     <>
       {/* Hero banner */}
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
         <img
-          src={service.image}
+          src={coverUrl}
           alt={service.title}
           width={1280}
           height={960}

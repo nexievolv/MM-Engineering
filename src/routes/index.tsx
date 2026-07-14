@@ -56,7 +56,7 @@ export const Route = createFileRoute("/")({
 
 
 /* ---------------- HERO ---------------- */
-function Hero() {
+function Hero({ heroImage }: { heroImage?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "22%"]);
@@ -71,10 +71,10 @@ function Hero() {
   };
 
   return (
-    <section ref={ref} onMouseMove={handleMouseMove} className="relative bg-navy">
+    <section ref={ref} onMouseMove={handleMouseMove} className="relative z-10 lg:z-20 bg-navy">
       <motion.div style={{ y: bgY }} className="absolute inset-0 overflow-hidden" aria-hidden>
         <img
-          src={img.heroFabrication}
+          src={heroImage || img.heroFabrication}
           alt="Industrial fabrication workshop at MM Engineering, Baddi"
           width={1920}
           height={1080}
@@ -145,7 +145,7 @@ function Hero() {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-14 grid grid-cols-2 border border-white/10 bg-navy-light/80 shadow-card-hover backdrop-blur-xl sm:grid-cols-4 lg:hidden"
+          className="mt-20 grid grid-cols-2 border border-white/10 bg-navy-light/80 shadow-card-hover backdrop-blur-xl sm:grid-cols-4 lg:hidden"
         >
           {stats.map((s, i) => (
             <div
@@ -264,6 +264,56 @@ const resolveImage = (imageUrl: string | null | undefined, category: string) => 
 function HomePage() {
   const [flippedCard, setFlippedCard] = useState<number | null>(null);
   const [dbHomePosts, setDbHomePosts] = useState<any[]>([]);
+  
+  // Dynamic Image Slots
+  const [heroUrl, setHeroUrl] = useState("");
+  const [aboutUrl, setAboutUrl] = useState("");
+  const [cap1Url, setCap1Url] = useState("");
+  const [cap2Url, setCap2Url] = useState("");
+  const [cap3Url, setCap3Url] = useState("");
+  const [qualityUrl, setQualityUrl] = useState("");
+  const [dbGalleryItems, setDbGalleryItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadGalleryAssets() {
+      try {
+        const { data } = await supabase
+          .from("gallery")
+          .select("*")
+          .eq("is_published", true);
+
+        if (data) {
+          const heroImg = data.find(g => g.page === "Homepage" && g.section === "Hero" && g.category === "Cover");
+          if (heroImg) setHeroUrl(heroImg.public_url);
+          
+          const aboutImg = data.find(g => g.page === "About" && g.section === "Overview" && g.category === "Cover");
+          if (aboutImg) setAboutUrl(aboutImg.public_url);
+          
+          const cap1 = data.find(g => g.page === "Homepage" && g.section === "Capabilities" && g.category === "industrial-fabrication");
+          const cap2 = data.find(g => g.page === "Homepage" && g.section === "Capabilities" && g.category === "assembly-integration");
+          const cap3 = data.find(g => g.page === "Homepage" && g.section === "Capabilities" && g.category === "custom-gear-manufacturing");
+          
+          if (cap1) setCap1Url(cap1.public_url);
+          if (cap2) setCap2Url(cap2.public_url);
+          if (cap3) setCap3Url(cap3.public_url);
+          
+          const qualityImg = data.find(g => g.page === "Homepage" && g.section === "Quality" && g.category === "Cover");
+          if (qualityImg) setQualityUrl(qualityImg.public_url);
+
+          const showcase = data.filter(g => g.show_on_homepage);
+          if (showcase.length > 0) {
+            setDbGalleryItems(showcase.map(i => ({
+              title: i.title,
+              image: i.public_url
+            })));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load homepage gallery images:", err);
+      }
+    }
+    loadGalleryAssets();
+  }, []);
 
   useEffect(() => {
     async function loadHomePosts() {
@@ -336,6 +386,27 @@ function HomePage() {
     loadHomeReviews();
   }, []);
 
+  const [dbProjects, setDbProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadHomeProjects() {
+      try {
+        const { data } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("active", true)
+          .order("sort_order", { ascending: true })
+          .limit(3);
+        if (data && data.length > 0) {
+          setDbProjects(data);
+        }
+      } catch (err) {
+        console.error("Failed to load homepage projects:", err);
+      }
+    }
+    loadHomeProjects();
+  }, []);
+
   // Only the 3 core capabilities on the home page — Industrial Fabrication, Assembly & Integration, Custom Gear Manufacturing
   const coreServices = services.filter((s) =>
     ["industrial-fabrication", "assembly-integration", "custom-gear-manufacturing"].includes(s.slug),
@@ -355,12 +426,24 @@ function HomePage() {
 
   const displayTestimonials = dbTestimonials.length > 0 ? dbTestimonials : testimonials;
 
+  const displayProjects = dbProjects.length > 0
+    ? dbProjects.map(p => ({
+        slug: p.slug,
+        title: p.title,
+        industry: p.industry,
+        client: p.client,
+        completed: p.completed,
+        image: p.image_url || img.steelStructure,
+        summary: p.summary
+      }))
+    : projects.slice(0, 3);
+
   return (
     <>
-      <Hero />
+      <Hero heroImage={heroUrl} />
 
       {/* Trusted By */}
-      <section className="border-b border-border bg-background pb-16 pt-24 md:pt-32 lg:pt-36">
+      <section className="relative z-10 border-b border-border bg-background pb-16 pt-24 md:pt-32 lg:pt-36">
         <div className="container mx-auto px-6 lg:px-12">
           <Reveal className="text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
@@ -387,7 +470,7 @@ function HomePage() {
         <div className="container mx-auto grid items-center gap-12 px-6 lg:grid-cols-2 lg:gap-20 lg:px-12">
           <Reveal x={-30} y={0} className="relative">
             <div className="img-zoom relative">
-              <img src={img.workshop} alt="Inside MM Engineering's fabrication workshop in Baddi" width={1280} height={960} loading="lazy" className="w-full object-cover" />
+              <img src={aboutUrl || img.workshop} alt="Inside MM Engineering's fabrication workshop in Baddi" width={1280} height={960} loading="lazy" className="w-full object-cover" />
             </div>
             <div className="absolute -bottom-8 -right-4 hidden border-l-4 border-accent bg-navy p-7 shadow-card-hover md:block lg:-right-10">
               <span className="font-display text-3xl font-black text-white md:text-4xl">Baddi, HP</span>
@@ -441,6 +524,10 @@ function HomePage() {
           <div className="space-y-16 md:space-y-24">
             {coreServices.map((s, idx) => {
               const isEven = idx % 2 === 0;
+              let cardImg = s.image;
+              if (s.slug === "industrial-fabrication" && cap1Url) cardImg = cap1Url;
+              else if (s.slug === "assembly-integration" && cap2Url) cardImg = cap2Url;
+              else if (s.slug === "custom-gear-manufacturing" && cap3Url) cardImg = cap3Url;
               return (
                 <div
                   key={s.slug}
@@ -458,7 +545,7 @@ function HomePage() {
                     >
                       <ImageReveal className="size-full">
                         <img
-                          src={s.image}
+                          src={cardImg}
                           alt={s.title}
                           className="size-full object-cover transition-transform duration-700 group-hover:scale-105"
                           loading="lazy"
@@ -563,7 +650,7 @@ function HomePage() {
                   matches your drawings — no rework, no schedule surprises.
                 </p>
                 <div className="img-zoom mt-10 hidden lg:block">
-                  <img src={img.quality} alt="Precision quality inspection at MM Engineering" width={1280} height={960} loading="lazy" className="w-full object-cover" />
+                  <img src={qualityUrl || img.quality} alt="Precision quality inspection at MM Engineering" width={1280} height={960} loading="lazy" className="w-full object-cover" />
                 </div>
               </Reveal>
             </div>
@@ -619,8 +706,8 @@ function HomePage() {
             eyebrow="Recent Projects"
             title="Work Delivered for BBN & Northern India Clients"
           />
-          <Stagger className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.slice(0, 3).map((p) => (
+          <Stagger key={displayProjects.map((p) => p.slug).join(",")} className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {displayProjects.map((p) => (
               <StaggerItem key={p.slug}>
                 <div className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
                   <div className="img-zoom relative h-56">
@@ -654,7 +741,7 @@ function HomePage() {
             title="Inside Our Baddi Workshop"
           />
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            {galleryItems.slice(0, 8).map((g, i) => (
+            {(dbGalleryItems.length > 0 ? dbGalleryItems : galleryItems).slice(0, 8).map((g, i) => (
               <Reveal
                 key={i}
                 delay={0.05 * i}

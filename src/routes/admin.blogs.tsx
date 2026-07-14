@@ -1,11 +1,36 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Loader, Trash2, Edit2, Plus, Save, Undo } from "lucide-react";
+import { 
+  Loader, 
+  Trash2, 
+  Edit2, 
+  Plus, 
+  Save, 
+  Undo, 
+  ImageIcon, 
+  Link as LinkIcon, 
+  Table as TableIcon, 
+  Columns, 
+  ChevronRight, 
+  CornerDownRight, 
+  Image as ImageIconLucide, 
+  FileText,
+  X
+} from "lucide-react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
+import { Underline } from "@tiptap/extension-underline";
+import { Link as TiptapLink } from "@tiptap/extension-link";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
+import { Image as TiptapImage } from "@tiptap/extension-image";
+
 import { fetchBlogPostsAdmin, upsertBlogPostAdmin, deleteBlogPostAdmin } from "@/lib/admin-actions";
 import { img } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
+import { ImagePickerModal } from "@/components/site/ImagePickerModal";
 
 export const Route = createFileRoute("/admin/blogs")({
   component: BlogsPage
@@ -37,10 +62,55 @@ function BlogsPage() {
   const [editingPost, setEditingPost] = useState<any | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Cover Image State
+  const [coverUrl, setCoverUrl] = useState("");
+
+  // Reusable Image Picker Modal States
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"cover" | "inline">("cover");
+
+  // Inline Image Prompt Modal States
+  const [inlinePromptOpen, setInlinePromptOpen] = useState(false);
+  const [inlineImageUrl, setInlineImageUrl] = useState("");
+  const [inlineImageAlt, setInlineImageAlt] = useState("");
+  const [inlineImageCaption, setInlineImageCaption] = useState("");
+  const [inlineImageAlignment, setInlineImageAlignment] = useState<"left" | "center" | "right">("center");
+
   // Rich Text Editor State
   const [editorContent, setEditorContent] = useState("");
   const editor = useEditor({
-    extensions: [StarterKit],
+    extensions: [
+      StarterKit,
+      Underline,
+      TiptapLink.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: "text-accent underline hover:text-navy transition-colors"
+        }
+      }),
+      Table.configure({
+        resizable: true,
+        HTMLAttributes: {
+          class: "border-collapse border border-border w-full my-6 text-xs text-left"
+        }
+      }),
+      TableRow,
+      TableCell.configure({
+        HTMLAttributes: {
+          class: "border border-border p-2"
+        }
+      }),
+      TableHeader.configure({
+        HTMLAttributes: {
+          class: "border border-border p-2 bg-muted/30 font-bold text-navy"
+        }
+      }),
+      TiptapImage.configure({
+        HTMLAttributes: {
+          class: "mx-auto max-w-full my-6 border border-border shadow-sm block"
+        }
+      })
+    ],
     content: "",
     onUpdate: ({ editor }) => {
       setEditorContent(editor.getHTML());
@@ -71,6 +141,7 @@ function BlogsPage() {
     if (editingPost && editor) {
       editor.commands.setContent(editingPost.content || "");
       setEditorContent(editingPost.content || "");
+      setCoverUrl(editingPost.image_url || "");
     }
   }, [editingPost, editor]);
 
@@ -93,6 +164,7 @@ function BlogsPage() {
       published: true,
       show_on_homepage: false
     });
+    setCoverUrl("");
   };
 
   const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -110,7 +182,7 @@ function BlogsPage() {
       author: formData.get("author") as string,
       date: formData.get("date") as string,
       read_time: formData.get("read_time") as string,
-      image_url: formData.get("image_url") as string,
+      image_url: coverUrl, // Send mapped cover image URL
       featured: !!formData.get("featured"),
       published: !!formData.get("published"),
       show_on_homepage: !!formData.get("show_on_homepage"),
@@ -139,6 +211,63 @@ function BlogsPage() {
     }
   };
 
+  // Image Picker Selector Resolver
+  const handleImagePickerSelect = (img: { public_url: string; alt_text?: string; title: string }) => {
+    if (pickerMode === "cover") {
+      setCoverUrl(img.public_url);
+    } else {
+      // In inline image insertion mode, open prompt modal to get alignment/caption metadata
+      setInlineImageUrl(img.public_url);
+      setInlineImageAlt(img.alt_text || img.title);
+      setInlineImageCaption(img.title);
+      setInlinePromptOpen(true);
+    }
+  };
+
+  const handleInsertInlineImageSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editor || !inlineImageUrl) return;
+
+    let containerStyle = "margin: 1.5rem auto; text-align: center; display: block; clear: both;";
+    let imgStyle = "max-width: 100%; height: auto; display: inline-block; border: 1px solid #e2e8f0; padding: 4px; background: white;";
+
+    if (inlineImageAlignment === "left") {
+      containerStyle = "float: left; margin: 0 1.5rem 1.5rem 0; max-width: 45%; text-align: left;";
+    } else if (inlineImageAlignment === "right") {
+      containerStyle = "float: right; margin: 0 0 1.5rem 1.5rem; max-width: 45%; text-align: right;";
+    }
+
+    const captionHtml = inlineImageCaption 
+      ? `<figcaption style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem; font-style: italic; text-align: center;">${inlineImageCaption}</figcaption>` 
+      : "";
+
+    editor.chain().focus().insertContent(`
+      <figure style="${containerStyle}" class="blog-inline-figure">
+        <img src="${inlineImageUrl}" alt="${inlineImageAlt}" style="${imgStyle}" />
+        ${captionHtml}
+      </figure>
+      <p></p>
+    `).run();
+
+    setInlinePromptOpen(false);
+    setInlineImageUrl("");
+  };
+
+  // Format link helper
+  const handleAddLink = () => {
+    if (!editor) return;
+    const previousUrl = editor.getAttributes("link").href;
+    const url = window.prompt("Enter target URL:", previousUrl);
+
+    if (url === null) return;
+    if (url === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+      return;
+    }
+
+    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+  };
+
   if (error) {
     return (
       <div className="text-center py-12">
@@ -159,8 +288,10 @@ function BlogsPage() {
 
   if (editingPost) {
     return (
-      <div>
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+      <div className="space-y-6">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-border">
           <h2 className="font-display text-xl font-bold text-navy">
             {editingPost.id ? "Edit Blog Post" : "Create New Blog Post"}
           </h2>
@@ -172,7 +303,8 @@ function BlogsPage() {
           </button>
         </div>
 
-        <form onSubmit={handleSave} className="space-y-5">
+        {/* Form */}
+        <form onSubmit={handleSave} className="space-y-6">
           <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-navy mb-1.5">
@@ -224,17 +356,30 @@ function BlogsPage() {
               </select>
             </div>
 
+            {/* UPGRADED Cover Image Picker */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-navy mb-1.5">
-                Cover Image URL
+                Cover Image
               </label>
-              <input
-                type="text"
-                name="image_url"
-                placeholder="https://..."
-                defaultValue={editingPost.image_url}
-                className="w-full border border-border bg-background px-4 py-2.5 text-sm focus:border-accent focus:outline-none"
-              />
+              <div className="flex gap-4 items-center">
+                {coverUrl ? (
+                  <img src={coverUrl} className="size-16 object-cover border border-border bg-muted/20" />
+                ) : (
+                  <div className="size-16 border border-dashed border-border bg-muted/10 flex items-center justify-center text-muted-foreground">
+                    <ImageIcon className="size-5" />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickerMode("cover");
+                    setPickerOpen(true);
+                  }}
+                  className="bg-navy hover:bg-accent text-white hover:text-accent-foreground px-4 py-2 text-xs font-bold uppercase tracking-wider transition-colors"
+                >
+                  Choose Cover Image
+                </button>
+              </div>
             </div>
 
             <div>
@@ -317,12 +462,17 @@ function BlogsPage() {
             />
           </div>
 
+          {/* UPGRADED Rich Text Body Editor */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-navy mb-1.5">
               Article Rich Text Body
             </label>
             <div className="border border-border bg-background rounded-sm">
-              <div className="flex flex-wrap gap-1 border-b border-border bg-muted/40 p-2">
+              
+              {/* Toolbar Controls */}
+              <div className="flex flex-wrap gap-1.5 border-b border-border bg-muted/40 p-2">
+                
+                {/* Text Formats */}
                 <button
                   type="button"
                   onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -351,6 +501,10 @@ function BlogsPage() {
                 >
                   Strike
                 </button>
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Headings */}
                 <button
                   type="button"
                   onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
@@ -365,6 +519,10 @@ function BlogsPage() {
                 >
                   H4
                 </button>
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Paragraph Structures */}
                 <button
                   type="button"
                   onClick={() => editor?.chain().focus().toggleBulletList().run()}
@@ -384,11 +542,116 @@ function BlogsPage() {
                   onClick={() => editor?.chain().focus().toggleBlockquote().run()}
                   className={cn("px-2.5 py-1 text-xs border rounded font-semibold", editor?.isActive("blockquote") ? "bg-navy text-white" : "bg-card border-border hover:bg-muted")}
                 >
-                  Blockquote
+                  Quote
                 </button>
+                <button
+                  type="button"
+                  onClick={() => editor?.chain().focus().toggleCodeBlock().run()}
+                  className={cn("px-2.5 py-1 text-xs border rounded font-semibold", editor?.isActive("codeBlock") ? "bg-navy text-white" : "bg-card border-border hover:bg-muted")}
+                >
+                  Code Block
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Links */}
+                <button
+                  type="button"
+                  onClick={handleAddLink}
+                  className={cn("px-2.5 py-1 text-xs border rounded font-semibold flex items-center gap-1", editor?.isActive("link") ? "bg-navy text-white" : "bg-card border-border hover:bg-muted")}
+                >
+                  <LinkIcon className="size-3" /> Link
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Inline Media Selector */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPickerMode("inline");
+                    setPickerOpen(true);
+                  }}
+                  className="px-2.5 py-1 text-xs border rounded bg-card border-border hover:border-accent hover:text-accent font-semibold flex items-center gap-1"
+                >
+                  <ImageIcon className="size-3 text-accent" /> Add Image
+                </button>
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Table Actions */}
+                <button
+                  type="button"
+                  onClick={() => editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+                  className="px-2.5 py-1 text-xs border border-border bg-card rounded font-semibold hover:bg-muted flex items-center gap-1"
+                  title="Insert Table"
+                >
+                  <TableIcon className="size-3" /> Table
+                </button>
+                {editor?.isActive("table") && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => editor?.chain().focus().addColumnAfter().run()}
+                      className="px-2 py-1 text-[10px] border border-border bg-card rounded hover:bg-muted"
+                    >
+                      + Col
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editor?.chain().focus().addRowAfter().run()}
+                      className="px-2 py-1 text-[10px] border border-border bg-card rounded hover:bg-muted"
+                    >
+                      + Row
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editor?.chain().focus().deleteColumn().run()}
+                      className="px-2 py-1 text-[10px] border border-red-200 bg-red-50 text-red-700 rounded hover:bg-red-100"
+                    >
+                      - Col
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editor?.chain().focus().deleteRow().run()}
+                      className="px-2 py-1 text-[10px] border border-red-200 bg-red-50 text-red-700 rounded hover:bg-red-100"
+                    >
+                      - Row
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => editor?.chain().focus().deleteTable().run()}
+                      className="px-2 py-1 text-[10px] border border-red-300 bg-red-100 text-red-800 rounded font-bold hover:bg-red-200"
+                    >
+                      Delete Table
+                    </button>
+                  </>
+                )}
+
+                <div className="w-px h-5 bg-border mx-1 self-center" />
+
+                {/* Undo / Redo */}
+                <button
+                  type="button"
+                  onClick={() => editor?.chain().focus().undo().run()}
+                  disabled={!editor?.can().undo()}
+                  className="px-2 py-1 text-xs border border-border bg-card rounded disabled:opacity-30 hover:bg-muted"
+                >
+                  Undo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => editor?.chain().focus().redo().run()}
+                  disabled={!editor?.can().redo()}
+                  className="px-2 py-1 text-xs border border-border bg-card rounded disabled:opacity-30 hover:bg-muted"
+                >
+                  Redo
+                </button>
+
               </div>
 
-              <div className="p-4 prose-industrial min-h-[300px] outline-none">
+              {/* Editor Workspace */}
+              <div className="p-5 min-h-[350px] outline-none prose prose-slate max-w-none prose-sm">
                 <EditorContent editor={editor} />
               </div>
             </div>
@@ -403,6 +666,89 @@ function BlogsPage() {
             Save Article
           </button>
         </form>
+
+        {/* Inline Image alignment and caption modal */}
+        {inlinePromptOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="relative w-full max-w-sm bg-card border border-border p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between border-b border-border pb-2.5 mb-4">
+                <h3 className="font-display text-sm font-bold text-navy uppercase tracking-wider">
+                  Image Settings
+                </h3>
+                <button type="button" onClick={() => setInlinePromptOpen(false)} className="p-1 hover:bg-muted text-muted-foreground hover:text-navy rounded-full">
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              <form onSubmit={handleInsertInlineImageSubmit} className="space-y-4 text-xs">
+                <div>
+                  <label className="block font-bold text-navy uppercase tracking-wider mb-1">
+                    Image Caption / Title
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Short description under the image"
+                    value={inlineImageCaption}
+                    onChange={(e) => setInlineImageCaption(e.target.value)}
+                    className="w-full border border-border bg-background px-3 py-2 focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-navy uppercase tracking-wider mb-1">
+                    SEO Alt Description
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Explain what the image shows"
+                    value={inlineImageAlt}
+                    onChange={(e) => setInlineImageAlt(e.target.value)}
+                    className="w-full border border-border bg-background px-3 py-2 focus:outline-none focus:border-accent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-navy uppercase tracking-wider mb-1">
+                    Alignment
+                  </label>
+                  <select
+                    value={inlineImageAlignment}
+                    onChange={(e: any) => setInlineImageAlignment(e.target.value)}
+                    className="w-full border border-border bg-background px-3 py-2 focus:outline-none focus:border-accent"
+                  >
+                    <option value="center">Centered (Large Block)</option>
+                    <option value="left">Left Aligned (Wrapped Text)</option>
+                    <option value="right">Right Aligned (Wrapped Text)</option>
+                  </select>
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setInlinePromptOpen(false)}
+                    className="border border-border hover:bg-muted px-4 py-2 font-bold uppercase tracking-wider text-[10px]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-accent text-accent-foreground px-4 py-2 font-bold uppercase tracking-wider text-[10px]"
+                  >
+                    Insert Image
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Reusable Image Picker Modal */}
+        <ImagePickerModal
+          isOpen={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          onSelect={handleImagePickerSelect}
+        />
+
       </div>
     );
   }

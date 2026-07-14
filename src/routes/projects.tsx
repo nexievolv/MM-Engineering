@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Building, Calendar, CheckCircle2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { img, projects } from "@/lib/site-data";
 import { CtaSection, Reveal, SectionHeader, Stagger, StaggerItem, Breadcrumbs } from "@/components/site/Shared";
 
@@ -21,11 +23,67 @@ export const Route = createFileRoute("/projects")({
 });
 
 function ProjectsPage() {
+  const [projectCovers, setProjectCovers] = useState<Record<string, string>>({});
+  const [dbProjects, setDbProjects] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadProjectCovers() {
+      try {
+        const { data } = await supabase
+          .from("gallery")
+          .select("*")
+          .eq("page", "Projects")
+          .eq("category", "Cover")
+          .eq("is_published", true);
+        if (data) {
+          const mapping: Record<string, string> = {};
+          data.forEach(img => {
+            if (img.section) mapping[img.section] = img.public_url;
+          });
+          setProjectCovers(mapping);
+        }
+      } catch (err) {
+        console.error("Failed to load project cover images:", err);
+      }
+    }
+
+    async function loadDbProjects() {
+      try {
+        const { data } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("active", true)
+          .order("sort_order", { ascending: true });
+        if (data && data.length > 0) {
+          setDbProjects(data);
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic projects:", err);
+      }
+    }
+
+    loadProjectCovers();
+    loadDbProjects();
+  }, []);
+
+  const displayProjects = dbProjects.length > 0
+    ? dbProjects.map(p => ({
+        slug: p.slug,
+        title: p.title,
+        industry: p.industry,
+        client: p.client,
+        completed: p.completed,
+        image: p.image_url || img.steelStructure,
+        specs: (p.specs as string[]) || [],
+        summary: p.summary
+      }))
+    : projects;
+
   return (
     <>
       <section className="relative overflow-hidden bg-navy pb-24 pt-40 md:pb-32 md:pt-48">
         <img
-          src={img.steelStructure}
+          src={projectCovers["projects-hero"] || img.steelStructure}
           alt="MM Engineering structural steel projects hero"
           width={1280}
           height={960}
@@ -55,12 +113,12 @@ function ProjectsPage() {
 
       <section className="blueprint-grid-dark bg-surface py-20 md:py-28">
         <div className="container mx-auto px-6 lg:px-12">
-          <Stagger className="grid gap-8 md:grid-cols-2">
-            {projects.map((p, i) => (
+          <Stagger key={displayProjects.map((p) => p.slug).join(",")} className="grid gap-8 md:grid-cols-2">
+            {displayProjects.map((p, i) => (
               <StaggerItem key={p.slug}>
                 <article className="card-lift group flex h-full flex-col border border-border bg-card shadow-card">
                   <div className="img-zoom relative h-72">
-                    <img src={p.image} alt={p.title} width={1280} height={960} loading="lazy" className="size-full object-cover" />
+                    <img src={projectCovers[p.slug] || p.image} alt={p.title} width={1280} height={960} loading="lazy" className="size-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/20 to-transparent" />
                     <span className="absolute left-5 top-5 bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
                       {p.industry}

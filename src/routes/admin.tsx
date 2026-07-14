@@ -8,7 +8,11 @@ import {
   ExternalLink,
   Loader,
   MessageSquare,
-  LayoutDashboard
+  LayoutDashboard,
+  Image as ImageIcon,
+  Home,
+  Wrench,
+  Briefcase
 } from "lucide-react";
 import { verifyAdminPassword } from "@/lib/admin-actions";
 
@@ -161,7 +165,11 @@ function AdminPage() {
             { to: "/admin", label: "Dashboard", icon: LayoutDashboard },
             { to: "/admin/leads", label: "Leads & RFQs", icon: Layers },
             { to: "/admin/reviews", label: "Reviews Approvals", icon: UserCheck },
-            { to: "/admin/blogs", label: "Blog CMS", icon: MessageSquare }
+            { to: "/admin/blogs", label: "Blog CMS", icon: MessageSquare },
+            { to: "/admin/projects", label: "Projects CMS", icon: Briefcase },
+            { to: "/admin/gallery", label: "Media Gallery", icon: ImageIcon },
+            { to: "/admin/homepage", label: "Homepage Editor", icon: Home },
+            { to: "/admin/services", label: "Services Editor", icon: Wrench }
           ].map((t) => {
             const Icon = t.icon;
             return (

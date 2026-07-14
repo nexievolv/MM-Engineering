@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      gallery: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          title: string
+          filename: string
+          storage_path: string
+          public_url: string
+          alt_text: string | null
+          page: string | null
+          section: string | null
+          category: string | null
+          is_published: boolean
+          show_on_homepage: boolean
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title: string
+          filename: string
+          storage_path: string
+          public_url: string
+          alt_text?: string | null
+          page?: string | null
+          section?: string | null
+          category?: string | null
+          is_published?: boolean
+          show_on_homepage?: boolean
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title?: string
+          filename?: string
+          storage_path?: string
+          public_url?: string
+          alt_text?: string | null
+          page?: string | null
+          section?: string | null
+          category?: string | null
+          is_published?: boolean
+          show_on_homepage?: boolean
+        }
+        Relationships: []
+      }
       leads: {
         Row: {
           id: string

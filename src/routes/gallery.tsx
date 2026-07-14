@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
 import { X, ZoomIn } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { galleryCategories, galleryItems, img } from "@/lib/site-data";
 import { CtaSection, Reveal, Breadcrumbs } from "@/components/site/Shared";
 import { cn } from "@/lib/utils";
@@ -28,8 +29,38 @@ function GalleryPage() {
   const [lightbox, setLightbox] = useState<number | null>(null); // Index in the filtered list
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const lightboxRef = useRef<HTMLDivElement | null>(null);
+  const [dbGalleryItems, setDbGalleryItems] = useState<any[]>([]);
 
-  const filtered = galleryItems.filter((g) => category === "All" || g.category === category);
+  useEffect(() => {
+    async function loadGallery() {
+      try {
+        const { data } = await supabase
+          .from("gallery")
+          .select("*")
+          .eq("is_published", true)
+          .order("created_at", { ascending: false });
+        if (data && data.length > 0) {
+          const formatted = data.map((item, index) => {
+            const bentoSizes = ["lg", "sm", "sm", "md", "md", "sm", "lg", "sm", "md", "md"];
+            const size = bentoSizes[index % bentoSizes.length];
+            return {
+              title: item.title,
+              image: item.public_url,
+              category: item.category || "Facilities",
+              size: size
+            };
+          });
+          setDbGalleryItems(formatted);
+        }
+      } catch (err) {
+        console.error("Failed to load gallery from DB:", err);
+      }
+    }
+    loadGallery();
+  }, []);
+
+  const displayItems = dbGalleryItems.length > 0 ? dbGalleryItems : galleryItems;
+  const filtered = displayItems.filter((g) => category === "All" || g.category === category);
 
   // Manage Keyboard events for lightbox
   useEffect(() => {
@@ -136,7 +167,7 @@ function GalleryPage() {
           </Reveal>
 
           {/* Bento grid */}
-          <motion.div layout className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [grid-auto-rows:180px] md:[grid-auto-rows:220px]">
+          <motion.div layout className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 [grid-auto-rows:180px] md:[grid-auto-rows:220px] grid-flow-dense">
             <AnimatePresence mode="popLayout">
               {filtered.map((g, idx) => {
                 return (
