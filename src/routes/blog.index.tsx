@@ -77,8 +77,9 @@ function BlogPage() {
 
   // If database contains posts, only use database posts. Otherwise, fall back to hardcoded.
   const allPosts = dbPosts.length > 0 ? dbPosts : blogPosts;
-  const featured = allPosts.find((p) => p.featured) ?? allPosts[0];
-  const rest = allPosts.filter((p) => p.slug !== featured?.slug);
+  const featuredPosts = allPosts.filter((p) => p.featured);
+  const finalFeatured = featuredPosts.length > 0 ? featuredPosts : (allPosts.length > 0 ? [allPosts[0]] : []);
+  const rest = allPosts.filter((p) => !finalFeatured.some((f) => f.slug === p.slug));
   const filtered = rest.filter(
     (p) =>
       (category === "All" || p.category === category) &&
@@ -159,39 +160,39 @@ function BlogPage() {
           </Reveal>
 
           {/* Featured */}
-          {showFeatured && (
-            <Reveal className="mb-12">
-              <Link to="/blog/$slug" params={{ slug: featured.slug }} className="group grid overflow-hidden border border-border bg-card shadow-card card-lift lg:grid-cols-2">
+          {showFeatured && finalFeatured.map((feat) => (
+            <Reveal key={feat.slug} className="mb-12">
+              <Link to="/blog/$slug" params={{ slug: feat.slug }} className="group grid overflow-hidden border border-border bg-card shadow-card card-lift lg:grid-cols-2">
                 <div className="img-zoom relative min-h-72">
-                  <img src={featured.image} alt={featured.title} width={1280} height={960} loading="lazy" className="absolute inset-0 size-full object-cover" />
+                  <img src={feat.image} alt={feat.title} width={1280} height={960} loading="lazy" className="absolute inset-0 size-full object-cover" />
                   <span className="absolute left-5 top-5 bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
                     Featured
                   </span>
                 </div>
                 <div className="flex flex-col justify-center p-8 md:p-12">
                   <div className="flex items-center gap-4 text-[11px] font-semibold uppercase tracking-wider">
-                    <span className="text-accent">{featured.category}</span>
+                    <span className="text-accent">{feat.category}</span>
                     <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <Clock className="size-3.5" /> {featured.readTime}
+                      <Clock className="size-3.5" /> {feat.readTime}
                     </span>
                   </div>
                   <h2 className="mt-4 font-display text-2xl font-bold leading-tight text-navy transition-colors group-hover:text-accent md:text-3xl">
-                    {featured.title}
+                    {feat.title}
                   </h2>
-                  <p className="mt-4 leading-relaxed text-muted-foreground">{featured.excerpt}</p>
+                  <p className="mt-4 leading-relaxed text-muted-foreground">{feat.excerpt}</p>
                   <div className="mt-6 flex items-center gap-3 text-sm">
                     <span className="grid size-9 place-items-center bg-navy font-display text-xs font-black text-navy-foreground">
-                      {featured.author[0]}
+                      {feat.author[0]}
                     </span>
                     <div>
-                      <span className="block font-semibold text-navy">{featured.author}</span>
-                      <span className="text-xs text-muted-foreground">{featured.date}</span>
+                      <span className="block font-semibold text-navy">{feat.author}</span>
+                      <span className="text-xs text-muted-foreground">{feat.date}</span>
                     </div>
                   </div>
                 </div>
               </Link>
             </Reveal>
-          )}
+          ))}
 
           {/* Grid */}
           <Stagger key={`${category}-${page}-${query}`} className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
