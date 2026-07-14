@@ -135,6 +135,7 @@ export function Header() {
         <div className="hidden items-center gap-3 xl:flex">
           <a
             href={`tel:${company.phone.replace(/[^+\d]/g, "")}`}
+            aria-label={`Call MM Engineering at ${company.phone}`}
             className={cn(
               "flex items-center gap-2 text-sm font-semibold transition-colors hover:text-accent",
               solid ? "text-navy" : "text-white",
